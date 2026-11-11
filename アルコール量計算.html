@@ -35,7 +35,7 @@
       display: block;
     }
 
-    input[type="number"] {
+    input[type="number"], select {
       width: 100%;
       padding: 10px;
       margin-top: 4px;
@@ -43,6 +43,7 @@
       border-radius: 8px;
       border: 1px solid #ccc;
       box-sizing: border-box;
+      background: #fff;
     }
 
     .btn-area {
@@ -100,6 +101,14 @@
   <label>原液の度数（％）</label>
   <input type="number" id="basePercent" placeholder="例：40">
 
+  <label>氷の量</label>
+  <select id="iceRatio">
+    <option value="0">氷なし</option>
+    <option value="0.3">少なめ（グラスの約3割）</option>
+    <option value="0.5" selected>普通（グラスの約5割）</option>
+    <option value="0.6">一杯（グラスの約6割）</option>
+  </select>
+
   <div class="btn-area">
     <button class="btn-main" onclick="calcOnce()">計算</button>
     <button class="btn-add" onclick="addToTotal()">累計に追加</button>
@@ -124,6 +133,7 @@
     const g = parseFloat(document.getElementById('glassVolume').value);
     const t = parseFloat(document.getElementById('targetPercent').value);
     const b = parseFloat(document.getElementById('basePercent').value);
+    const ice = parseFloat(document.getElementById('iceRatio').value);
 
     if (!g || g <= 0) return alert("コップ容量を入力してください。"), null;
     if (!t || t <= 0) return alert("希望度数を入力してください。"), null;
@@ -131,34 +141,37 @@
     if (t > 100 || b > 100) return alert("度数は100％以下で入力してください。"), null;
     if (t > b) return alert("希望度数が原液度数を超えています。割って作る場合、希望度数は原液度数以下にしてください。"), null;
 
-    return { g, t, b };
+    return { g, t, b, ice };
   }
 
-  function inputKey(g, t, b) {
-    return g + "," + t + "," + b;
+  function inputKey(g, t, b, ice) {
+    return g + "," + t + "," + b + "," + ice;
   }
 
   function calcOnce() {
     const v = getInputs();
     if (!v) return;
 
-    const baseVolume = v.t * v.g / v.b;
-    const mixerVolume = v.g - baseVolume;
+    const liquidVolume = v.g * (1 - v.ice);
+    const baseVolume = v.t * liquidVolume / v.b;
+    const mixerVolume = liquidVolume - baseVolume;
     const pure = baseVolume * (v.b / 100) * 0.8;
     const unit = pure / 20;
 
     const box = document.getElementById("currentResult");
     box.innerHTML =
-      `・コップ容量：${v.g} ml<br>
+      `・コップ容量：${v.g} ml（氷 約${Math.round(v.ice * 100)}％）<br>
+       ・液体の合計：約 ${liquidVolume.toFixed(1)} ml<br>
        ・希望度数：${v.t} %<br>
        ・原液度数：${v.b} %<br><br>
        ⇒ 必要な原液量：約 ${baseVolume.toFixed(1)} ml<br>
        ⇒ 割り材の量：約 ${mixerVolume.toFixed(1)} ml<br>
        ⇒ 純アルコール量：約 ${pure.toFixed(1)} g<br>
-       ⇒ 単位数（20g）：約 ${unit.toFixed(2)} 単位`;
+       ⇒ 単位数（20g）：約 ${unit.toFixed(2)} 単位<br>
+       <span style="font-size:12px;color:#666;">※氷が溶けると少しずつ薄まります。純アルコール量は変わりません。</span>`;
 
     box.dataset.pure = pure;
-    box.dataset.key = inputKey(v.g, v.t, v.b);
+    box.dataset.key = inputKey(v.g, v.t, v.b, v.ice);
   }
 
   function addToTotal() {
@@ -169,7 +182,8 @@
     const g = parseFloat(document.getElementById('glassVolume').value);
     const t = parseFloat(document.getElementById('targetPercent').value);
     const b = parseFloat(document.getElementById('basePercent').value);
-    if (box.dataset.key !== inputKey(g, t, b)) {
+    const ice = parseFloat(document.getElementById('iceRatio').value);
+    if (box.dataset.key !== inputKey(g, t, b, ice)) {
       return alert("入力が計算時から変わっています。もう一度「計算」を押してください。");
     }
 

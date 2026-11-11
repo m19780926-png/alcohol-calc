@@ -128,8 +128,14 @@
     if (!g || g <= 0) return alert("コップ容量を入力してください。"), null;
     if (!t || t <= 0) return alert("希望度数を入力してください。"), null;
     if (!b || b <= 0) return alert("原液度数を入力してください。"), null;
+    if (t > 100 || b > 100) return alert("度数は100％以下で入力してください。"), null;
+    if (t > b) return alert("希望度数が原液度数を超えています。割って作る場合、希望度数は原液度数以下にしてください。"), null;
 
     return { g, t, b };
+  }
+
+  function inputKey(g, t, b) {
+    return g + "," + t + "," + b;
   }
 
   function calcOnce() {
@@ -137,6 +143,7 @@
     if (!v) return;
 
     const baseVolume = v.t * v.g / v.b;
+    const mixerVolume = v.g - baseVolume;
     const pure = baseVolume * (v.b / 100) * 0.8;
     const unit = pure / 20;
 
@@ -146,15 +153,25 @@
        ・希望度数：${v.t} %<br>
        ・原液度数：${v.b} %<br><br>
        ⇒ 必要な原液量：約 ${baseVolume.toFixed(1)} ml<br>
+       ⇒ 割り材の量：約 ${mixerVolume.toFixed(1)} ml<br>
        ⇒ 純アルコール量：約 ${pure.toFixed(1)} g<br>
        ⇒ 単位数（20g）：約 ${unit.toFixed(2)} 単位`;
 
     box.dataset.pure = pure;
+    box.dataset.key = inputKey(v.g, v.t, v.b);
   }
 
   function addToTotal() {
-    const pure = parseFloat(document.getElementById("currentResult").dataset.pure);
+    const box = document.getElementById("currentResult");
+    const pure = parseFloat(box.dataset.pure);
     if (!pure) return alert("まず計算してください。");
+
+    const g = parseFloat(document.getElementById('glassVolume').value);
+    const t = parseFloat(document.getElementById('targetPercent').value);
+    const b = parseFloat(document.getElementById('basePercent').value);
+    if (box.dataset.key !== inputKey(g, t, b)) {
+      return alert("入力が計算時から変わっています。もう一度「計算」を押してください。");
+    }
 
     totalPure += pure;
     updateTotal();
@@ -163,6 +180,10 @@
   function resetTotal() {
     if (!confirm("累計をリセットしますか？")) return;
     totalPure = 0;
+    const box = document.getElementById("currentResult");
+    box.innerHTML = "まだ計算していません。";
+    delete box.dataset.pure;
+    delete box.dataset.key;
     updateTotal();
   }
 
